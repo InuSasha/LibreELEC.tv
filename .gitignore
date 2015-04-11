@@ -7,7 +7,7 @@
 /.stamps/
 
 # prebuild target binarys to provide
-/target/
+/target
 
 # scripts for getting and packing source packages
 /tools/mkpkg/*

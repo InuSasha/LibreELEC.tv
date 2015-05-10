@@ -1,0 +1,67 @@
+diff --git a/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml b/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
+index 631afa5..fdd9478 100644
+--- a/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
++++ b/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
+@@ -263,6 +263,35 @@
+ 					<font>font12_title</font>
+ 					<textcolor>white</textcolor>
+ 					<shadowcolor>black</shadowcolor>
++					<visible>!IsEmpty(Window.Property(LatestEpisode.Title.RecentlyAdded))</visible>
++				</control>
++				<control type="label">
++					<description>Title label</description>
++					<left>240</left>
++					<top>220</top>
++					<height>20</height>
++					<width>480</width>
++					<label>626</label>
++					<align>center</align>
++					<aligny>center</aligny>
++					<font>font12_title</font>
++					<textcolor>white</textcolor>
++					<shadowcolor>black</shadowcolor>
++					<visible>!IsEmpty(Window.Property(LatestEpisode.Title.InProgress))</visible>
++				</control>
++				<control type="label">
++					<description>Title label</description>
++					<left>240</left>
++					<top>220</top>
++					<height>20</height>
++					<width>480</width>
++					<label>38011</label>
++					<align>center</align>
++					<aligny>center</aligny>
++					<font>font12_title</font>
++					<textcolor>white</textcolor>
++					<shadowcolor>black</shadowcolor>
++					<visible>!IsEmpty(Window.Property(LatestEpisode.Title.InProgress_RecentlyAdded))</visible>
+ 				</control>
+ 				<control type="list" id="8001">
+ 					<animation effect="slide" start="0,0" end="120,0" time="0" condition="StringCompare(Container(8001).NumItems,3)">conditional</animation>
+@@ -297,7 +326,7 @@
+ 							<top>10</top>
+ 							<width>220</width>
+ 							<height>155</height>
+-							<aspectratio>scale</aspectratio>
++							<aspectratio>keep</aspectratio>
+ 							<texture background="true">$INFO[ListItem.Icon]</texture>
+ 							<bordertexture border="5">button-nofocus.png</bordertexture>
+ 							<bordersize>5</bordersize>
+@@ -343,7 +372,7 @@
+ 							<top>10</top>
+ 							<width>220</width>
+ 							<height>155</height>
+-							<aspectratio>scale</aspectratio>
++							<aspectratio>keep</aspectratio>
+ 							<texture background="true">$INFO[ListItem.Icon]</texture>
+ 							<bordertexture border="5">folder-focus.png</bordertexture>
+ 							<bordersize>5</bordersize>
+@@ -354,7 +383,7 @@
+ 							<top>10</top>
+ 							<width>220</width>
+ 							<height>155</height>
+-							<aspectratio>scale</aspectratio>
++							<aspectratio>keep</aspectratio>
+ 							<texture>$INFO[ListItem.Icon]</texture>
+ 							<bordertexture border="5">button-nofocus.png</bordertexture>
+ 							<bordersize>5</bordersize>

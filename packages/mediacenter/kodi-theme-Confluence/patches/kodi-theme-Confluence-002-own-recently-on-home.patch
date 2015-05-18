@@ -1,7 +1,7 @@
-diff --git a/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml b/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
+diff --git a/720p/IncludesHomeRecentlyAdded.xml b/720p/IncludesHomeRecentlyAdded.xml
 index 631afa5..fdd9478 100644
---- a/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
-+++ b/addons/skin.confluence/720p/IncludesHomeRecentlyAdded.xml
+--- a/720p/IncludesHomeRecentlyAdded.xml
++++ b/720p/IncludesHomeRecentlyAdded.xml
 @@ -263,6 +263,35 @@
  					<font>font12_title</font>
  					<textcolor>white</textcolor>

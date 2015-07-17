@@ -1,0 +1,443 @@
+--- a/addons/resource.language.en_gb/resources/strings.po
++++ b/addons/resource.language.en_gb/resources/strings.po
+@@ -16922,3 +16922,33 @@ msgstr ""
+ msgctxt "#38016"
+ msgid "%d fps"
+ msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98017"
++msgid "Recently added TV shows"
++msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98018"
++msgid "In progress and recently added TV shows"
++msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98019"
++msgid "Show watched videos on homescreen"
++msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98020"
++msgid "TV show preview on homescreen"
++msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98021"
++msgid "When activated, it shows the seen movies and episodes / TV shows on the homescreen preview."
++msgstr ""
++
++#: system/settings/settings.xml
++msgctxt "#98022"
++msgid "The preview of TV shows on the homescreen have 4 possible options\n[Recently added episodes] Shows the recently added episodes\n[Recently added TV shows] Shows the recently added TV shows\n[In progress TV shows] Shows the in progress TV shows\n[In progress and recently added TV shows] Shows the in progress TV shows, propagated with the recently added\n\nwatched TV shows present the first unseen episode with the poster for the TV show."
++msgstr ""
+--- a/system/settings/settings.xml
++++ b/system/settings/settings.xml
+@@ -465,6 +465,26 @@
+         </setting>
+       </group>
+       <group id="2">
++        <setting id="videolibrary.showseeninhome" type="boolean" label="98019" help="98021">
++          <level>0</level>
++          <default>true</default>
++          <control type="toggle" />
++        </setting>
++        <setting id="videolibrary.tvshowsinhome" type="integer" label="98020" help="98022">
++          <level>0</level>
++          <default>0</default> <!-- Recently added episodes -->
++          <constraints>
++            <options>
++              <option label="20387">0</option> <!-- Recently added episodes -->
++              <option label="98017">1</option> <!-- Recently added tvshows -->
++              <option label=  "626">2</option> <!-- In progress tvshows -->
++              <option label="98018">4</option> <!-- In progress and recently added tvshows -->
++            </options>
++          </constraints>
++          <control type="spinner" format="string" />
++        </setting>
++      </group>
++      <group id="3">
+         <setting id="videolibrary.updateonstartup" type="boolean" label="22000" help="36146">
+           <level>1</level>
+           <default>false</default>
+@@ -476,7 +496,7 @@
+           <control type="toggle" />
+         </setting>
+       </group>
+-      <group id="3">
++      <group id="4">
+         <setting id="videolibrary.cleanup" type="action" label="334" help="36148">
+           <level>2</level>
+           <control type="button" format="action" />
+--- a/xbmc/settings/MediaSettings.cpp
++++ b/xbmc/settings/MediaSettings.cpp
+@@ -37,6 +37,8 @@
+ #include "utils/XMLUtils.h"
+ #include "utils/Variant.h"
+ #include "video/VideoDatabase.h"
++#include "guilib/GUIWindowManager.h"
++#include "utils/RecentlyAddedJob.h"
+ 
+ using namespace std;
+ 
+@@ -256,6 +258,10 @@ bool CMediaSettings::Save(TiXmlNode *settings) const
+ 
+   XMLUtils::SetInt(pNode, "needsupdate", m_videoNeedsUpdate);
+ 
++  // send refesh for recently added videos
++  CGUIMessage reload(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_REFRESH_THUMBS, Video);
++  g_windowManager.SendThreadMessage(reload, 0);
++
+   return true;
+ }
+ 
+--- a/xbmc/settings/Settings.cpp
++++ b/xbmc/settings/Settings.cpp
+@@ -702,6 +702,8 @@ void CSettings::InitializeISettingCallbacks()
+   settingSet.insert("videolibrary.cleanup");
+   settingSet.insert("videolibrary.import");
+   settingSet.insert("videolibrary.export");
++  settingSet.insert("videolibrary.showseeninhome");
++  settingSet.insert("videolibrary.tvshowsinhome");
+   m_settingsManager->RegisterCallback(&CMediaSettings::Get(), settingSet);
+ 
+   settingSet.clear();
+--- a/xbmc/settings/Settings.h
++++ b/xbmc/settings/Settings.h
+@@ -30,6 +30,11 @@
+ #include "settings/lib/ISettingCallback.h"
+ #include "threads/CriticalSection.h"
+ 
++#define SETTINGS_VIDEODB_TVSHOW_HOME_EPISODES                  0
++#define SETTINGS_VIDEODB_TVSHOW_HOME_RECENTLY_ADDED            1
++#define SETTINGS_VIDEODB_TVSHOW_HOME_INPROGRESS                2
++#define SETTINGS_VIDEODB_TVSHOW_HOME_INPROGRESS_RECENTLY_ADDED 4
++
+ class CSetting;
+ class CSettingList;
+ class CSettingSection;
+--- a/xbmc/utils/RecentlyAddedJob.cpp
++++ b/xbmc/utils/RecentlyAddedJob.cpp
+@@ -30,6 +30,7 @@
+ #include "music/tags/MusicInfoTag.h"
+ #include "utils/StringUtils.h"
+ #include "settings/AdvancedSettings.h"
++#include "settings/Settings.h"
+ #include "music/MusicThumbLoader.h"
+ #include "video/VideoThumbLoader.h"
+ 
+@@ -49,22 +50,29 @@ bool CRecentlyAddedJob::UpdateVideo()
+ 
+   CLog::Log(LOGDEBUG, "CRecentlyAddedJob::UpdateVideos() - Running RecentlyAdded home screen update");
+   
+-  int            i = 0;
+-  CFileItemList  items;
++  int i;
+   CVideoDatabase videodatabase;
+   CVideoThumbLoader loader;
+   loader.OnLoaderStart();
+   
+   videodatabase.Open();
+ 
+-  if (videodatabase.GetRecentlyAddedMoviesNav("videodb://recentlyaddedmovies/", items, NUM_ITEMS))
+-  {  
+-    for (; i < items.Size(); ++i)
++  i = 0;
++  CFileItemList          MovieItems;
++  CVideoDatabase::Filter MovieFilter;
++  MovieFilter.limit = videodatabase.PrepareSQL("%u", NUM_ITEMS);
++  MovieFilter.order = "dateAdded desc, idMovie desc";
++  if (!CSettings::Get().GetBool("videolibrary.showseeninhome"))
++    MovieFilter.where = "playCount is NULL";
++
++  if (videodatabase.GetMoviesByWhere("videodb://recentlyaddedmovies/", MovieFilter, MovieItems))
++  {
++    for (; i < MovieItems.Size(); ++i)
+     {
+-      CFileItemPtr item = items.Get(i);
+-      std::string   value = StringUtils::Format("%i", i + 1);
++      CFileItemPtr item      = MovieItems.Get(i);
++      std::string   value     = StringUtils::Format("%i", i + 1);
+       std::string   strRating = StringUtils::Format("%.1f", item->GetVideoInfoTag()->m_fRating);;
+-      
++
+       home->SetProperty("LatestMovie." + value + ".Title"       , item->GetLabel());
+       home->SetProperty("LatestMovie." + value + ".Rating"      , strRating);
+       home->SetProperty("LatestMovie." + value + ".Year"        , item->GetVideoInfoTag()->m_iYear);
+@@ -79,7 +87,7 @@ bool CRecentlyAddedJob::UpdateVideo()
+       home->SetProperty("LatestMovie." + value + ".Thumb"       , item->GetArt("thumb"));
+       home->SetProperty("LatestMovie." + value + ".Fanart"      , item->GetArt("fanart"));
+     }
+-  } 
++  }
+   for (; i < NUM_ITEMS; ++i)
+   {
+     std::string value = StringUtils::Format("%i", i + 1);
+@@ -93,49 +101,138 @@ bool CRecentlyAddedJob::UpdateVideo()
+     home->SetProperty("LatestMovie." + value + ".Trailer"     , "");
+     home->SetProperty("LatestMovie." + value + ".Fanart"      , "");
+   }
+- 
++
+   i = 0;
+-  CFileItemList  TVShowItems; 
+- 
+-  if (videodatabase.GetRecentlyAddedEpisodesNav("videodb://recentlyaddedepisodes/", TVShowItems, NUM_ITEMS))
++  if (CSettings::Get().GetInt("videolibrary.tvshowsinhome") == SETTINGS_VIDEODB_TVSHOW_HOME_EPISODES)
+   {
+-    for (; i < TVShowItems.Size(); ++i)
+-    {    
+-      CFileItemPtr item          = TVShowItems.Get(i);
+-      int          EpisodeSeason = item->GetVideoInfoTag()->m_iSeason;
+-      int          EpisodeNumber = item->GetVideoInfoTag()->m_iEpisode;
+-      std::string   EpisodeNo = StringUtils::Format("s%02de%02d", EpisodeSeason, EpisodeNumber);
+-      std::string   value = StringUtils::Format("%i", i + 1);
+-      std::string   strRating = StringUtils::Format("%.1f", item->GetVideoInfoTag()->m_fRating);
++    home->SetProperty("LatestEpisode.Title", g_localizeStrings.Get(20387));
++    CFileItemList          EpisodesItems;
++    CVideoDatabase::Filter EpisodesFilter;
++    EpisodesFilter.limit = videodatabase.PrepareSQL("%u", NUM_ITEMS);
++    EpisodesFilter.order = "dateAdded desc, idEpisode desc";
++    if (!CSettings::Get().GetBool("videolibrary.showseeninhome"))
++      EpisodesFilter.where = "playCount is NULL";
+ 
+-      home->SetProperty("LatestEpisode." + value + ".ShowTitle"     , item->GetVideoInfoTag()->m_strShowTitle);
+-      home->SetProperty("LatestEpisode." + value + ".EpisodeTitle"  , item->GetVideoInfoTag()->m_strTitle);
+-      home->SetProperty("LatestEpisode." + value + ".Rating"        , strRating);      
+-      home->SetProperty("LatestEpisode." + value + ".Plot"          , item->GetVideoInfoTag()->m_strPlot);
+-      home->SetProperty("LatestEpisode." + value + ".EpisodeNo"     , EpisodeNo);
+-      home->SetProperty("LatestEpisode." + value + ".EpisodeSeason" , EpisodeSeason);
+-      home->SetProperty("LatestEpisode." + value + ".EpisodeNumber" , EpisodeNumber);
+-      home->SetProperty("LatestEpisode." + value + ".Path"          , item->GetVideoInfoTag()->m_strFileNameAndPath);
++    if (videodatabase.GetEpisodesByWhere("videodb://recentlyaddedepisodes/", EpisodesFilter, EpisodesItems, NUM_ITEMS))
++    {
++      for (; i < EpisodesItems.Size(); ++i)
++      {
++        CFileItemPtr item          = EpisodesItems.Get(i);
++        int          EpisodeSeason = item->GetVideoInfoTag()->m_iSeason;
++        int          EpisodeNumber = item->GetVideoInfoTag()->m_iEpisode;
++        std::string  EpisodeNo     = StringUtils::Format("s%02de%02d", EpisodeSeason, EpisodeNumber);
++        std::string  value         = StringUtils::Format("%i", i + 1);
++        std::string  strRating     = StringUtils::Format("%.1f", item->GetVideoInfoTag()->m_fRating);
+ 
+-      if (!item->HasArt("thumb"))
+-        loader.LoadItem(item.get());
++        home->SetProperty("LatestEpisode." + value + ".ShowTitle"     , item->GetVideoInfoTag()->m_strShowTitle);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeTitle"  , item->GetVideoInfoTag()->m_strTitle);
++        home->SetProperty("LatestEpisode." + value + ".Rating"        , strRating);
++        home->SetProperty("LatestEpisode." + value + ".Plot"          , item->GetVideoInfoTag()->m_strPlot);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeNo"     , EpisodeNo);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeSeason" , EpisodeSeason);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeNumber" , EpisodeNumber);
++        home->SetProperty("LatestEpisode." + value + ".Path"          , item->GetVideoInfoTag()->m_strFileNameAndPath);
++
++        if (!item->HasArt("thumb"))
++          loader.LoadItem(item.get());
+ 
+-      std::string seasonThumb;
+-      if (item->GetVideoInfoTag()->m_iIdSeason > 0)
+-        seasonThumb = videodatabase.GetArtForItem(item->GetVideoInfoTag()->m_iIdSeason, MediaTypeSeason, "thumb");
++        std::string seasonThumb;
++        if (item->GetVideoInfoTag()->m_iIdSeason > 0)
++          seasonThumb = videodatabase.GetArtForItem(item->GetVideoInfoTag()->m_iIdSeason, MediaTypeSeason, "thumb");
+ 
+-      home->SetProperty("LatestEpisode." + value + ".Thumb"         , item->GetArt("thumb"));
+-      home->SetProperty("LatestEpisode." + value + ".ShowThumb"     , item->GetArt("tvshow.thumb"));
+-      home->SetProperty("LatestEpisode." + value + ".SeasonThumb"   , seasonThumb);
+-      home->SetProperty("LatestEpisode." + value + ".Fanart"        , item->GetArt("fanart"));
++        home->SetProperty("LatestEpisode." + value + ".Thumb"         , item->GetArt("thumb"));
++        home->SetProperty("LatestEpisode." + value + ".ShowThumb"     , item->GetArt("tvshow.thumb"));
++        home->SetProperty("LatestEpisode." + value + ".SeasonThumb"   , seasonThumb);
++        home->SetProperty("LatestEpisode." + value + ".Fanart"        , item->GetArt("fanart"));
++      }
+     }
+-  } 
++  }
++  else
++  {
++    CFileItemList          TVShowItems;
++    CVideoDatabase::Filter TVShowFilter;
++    TVShowFilter.limit = videodatabase.PrepareSQL("%u", NUM_ITEMS);
++    switch (CSettings::Get().GetInt("videolibrary.tvshowsinhome"))
++    {
++      case SETTINGS_VIDEODB_TVSHOW_HOME_RECENTLY_ADDED:
++      {
++        home->SetProperty("LatestEpisode.Title", g_localizeStrings.Get(98017));
++        TVShowFilter.order = "dateAdded desc, idShow desc";
++        if (CSettings::Get().GetBool("videolibrary.showseeninhome"))
++          TVShowFilter.where = "totalcount != 0";
++        else
++          TVShowFilter.where = "totalcount != 0 AND watchedcount != totalcount";
++        break;
++      }
++      case SETTINGS_VIDEODB_TVSHOW_HOME_INPROGRESS:
++      {
++        home->SetProperty("LatestEpisode.Title", g_localizeStrings.Get(626));
++        TVShowFilter.order = "dateAdded desc, idShow desc";
++        TVShowFilter.where = "watchedcount != 0 AND watchedcount != totalcount";
++        break;
++      }
++      case SETTINGS_VIDEODB_TVSHOW_HOME_INPROGRESS_RECENTLY_ADDED:
++      {
++        home->SetProperty("LatestEpisode.Title", g_localizeStrings.Get(98018));
++        TVShowFilter.order = "(watchedCount != 0 AND watchedCount != totalCount) desc, dateAdded desc, idShow desc";
++        if (CSettings::Get().GetBool("videolibrary.showseeninhome"))
++          TVShowFilter.where = "totalcount != 0";
++        else
++          TVShowFilter.where = "totalcount != 0 AND watchedcount != totalcount";
++        break;
++      }
++    }
++    if (videodatabase.GetTvShowsByWhere("videodb://tvshows/", TVShowFilter, TVShowItems))
++    {
++      int failed = 0;
++      for (; i < TVShowItems.Size(); ++i)
++      {
++        CFileItemPtr item  = TVShowItems.Get(i);
++        int          dbID  = item->GetVideoInfoTag()->m_iDbId;
++        CFileItemPtr nextEpisode;
++        if (!videodatabase.GetNextEpisodeFromTvShow(dbID, nextEpisode))
++        {
++          CLog::Log(LOGWARNING, "CRecentlyAddedJob::UpdateVideos() - Failed to load episode for tvshow %u", dbID);
++          failed++;
++          continue;
++        }
++        std::string  value = StringUtils::Format("%i", i + 1 - failed);
++
++        // tvshow values
++        std::string  strRating = StringUtils::Format("%.1f", item->GetVideoInfoTag()->m_fRating);
++        home->SetProperty("LatestEpisode." + value + ".ShowTitle"     , item->GetVideoInfoTag()->m_strShowTitle);
++        home->SetProperty("LatestEpisode." + value + ".Rating"        , strRating);
++        home->SetProperty("LatestEpisode." + value + ".Plot"          , item->GetVideoInfoTag()->m_strPlot);
++
++        if (!item->HasArt("thumb"))
++          loader.LoadItem(item.get());
++        home->SetProperty("LatestEpisode." + value + ".Thumb"         , item->GetArt("thumb"));
++        home->SetProperty("LatestEpisode." + value + ".ShowThumb"     , item->GetArt("thumb"));
++        home->SetProperty("LatestEpisode." + value + ".Fanart"        , item->GetArt("fanart"));
++
++        // episode value
++        int          EpisodeSeason = nextEpisode->GetVideoInfoTag()->m_iSeason;
++        int          EpisodeNumber = nextEpisode->GetVideoInfoTag()->m_iEpisode;
++        std::string  EpisodeNo     = StringUtils::Format("s%02de%02d", EpisodeSeason, EpisodeNumber);
++        std::string  seasonThumb;
++        if (nextEpisode->GetVideoInfoTag()->m_iIdSeason > 0)
++          seasonThumb = videodatabase.GetArtForItem(nextEpisode->GetVideoInfoTag()->m_iIdSeason, MediaTypeSeason, "thumb");
++        home->SetProperty("LatestEpisode." + value + ".EpisodeTitle"  , nextEpisode->GetVideoInfoTag()->m_strTitle);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeNo"     , EpisodeNo);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeSeason" , EpisodeSeason);
++        home->SetProperty("LatestEpisode." + value + ".EpisodeNumber" , EpisodeNumber);
++        home->SetProperty("LatestEpisode." + value + ".Path"          , nextEpisode->GetVideoInfoTag()->m_strFileNameAndPath);
++        home->SetProperty("LatestEpisode." + value + ".SeasonThumb"   , seasonThumb);
++      }
++      i = i - failed;
++    }
++  }
+   for (; i < NUM_ITEMS; ++i)
+   {
+     std::string value = StringUtils::Format("%i", i + 1);
+     home->SetProperty("LatestEpisode." + value + ".ShowTitle"     , "");
+     home->SetProperty("LatestEpisode." + value + ".EpisodeTitle"  , "");
+-    home->SetProperty("LatestEpisode." + value + ".Rating"        , "");      
++    home->SetProperty("LatestEpisode." + value + ".Rating"        , "");
+     home->SetProperty("LatestEpisode." + value + ".Plot"          , "");
+     home->SetProperty("LatestEpisode." + value + ".EpisodeNo"     , "");
+     home->SetProperty("LatestEpisode." + value + ".EpisodeSeason" , "");
+@@ -145,12 +242,17 @@ bool CRecentlyAddedJob::UpdateVideo()
+     home->SetProperty("LatestEpisode." + value + ".ShowThumb"     , "");
+     home->SetProperty("LatestEpisode." + value + ".SeasonThumb"   , "");
+     home->SetProperty("LatestEpisode." + value + ".Fanart"        , "");
+-  }  
++  }
+ 
+   i = 0;
+-  CFileItemList MusicVideoItems;
++  CFileItemList          MusicVideoItems;
++  CVideoDatabase::Filter MusicVideoFilter;
++  MusicVideoFilter.limit = videodatabase.PrepareSQL("%u", NUM_ITEMS);
++  MusicVideoFilter.order = "dateAdded desc, idMVideo desc";
++  if (!CSettings::Get().GetBool("videolibrary.showseeninhome"))
++	  MusicVideoFilter.where = "playCount is NULL";
+ 
+-  if (videodatabase.GetRecentlyAddedMusicVideosNav("videodb://recentlyaddedmusicvideos/", MusicVideoItems, NUM_ITEMS))
++  if (videodatabase.GetMusicVideosByWhere("videodb://recentlyaddedmusicvideos/", MusicVideoFilter, MusicVideoItems))
+   {
+     for (; i < MusicVideoItems.Size(); ++i)
+     {
+--- a/xbmc/video/VideoDatabase.cpp
++++ b/xbmc/video/VideoDatabase.cpp
+@@ -6440,6 +6440,27 @@ int CVideoDatabase::GetTvShowForEpisode(int idEpisode)
+   return false;
+ }
+ 
++/* select the first unseen expisode of a tvshow.
++ * when all seen, the first episode is selected.
++ */
++bool CVideoDatabase::GetNextEpisodeFromTvShow(const int idTvShow, CFileItemPtr& item)
++{
++  CFileItemList items;
++  std::string dbURL = StringUtils::Format("videodb://tvshows/titles/%i/-1/", idTvShow);
++  Filter filter;
++  filter.order = PrepareSQL("(playcount is NULL) desc, CASE WHEN c%u = -1 THEN cast(c%u as SIGNED) ELSE cast(c%u as SIGNED) END, CASE WHEN c%u = -1 THEN cast(c%u as SIGNED) ELSE cast(c%u as SIGNED) END, c%u desc",
++                            VIDEODB_ID_EPISODE_SORTSEASON, VIDEODB_ID_EPISODE_SEASON, VIDEODB_ID_EPISODE_SORTSEASON,
++                            VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE, VIDEODB_ID_EPISODE_SORTEPISODE,
++                            VIDEODB_ID_EPISODE_SORTEPISODE);
++  filter.limit = "1";
++
++  if (!GetEpisodesByWhere(dbURL, filter, items) && items.Size() != 1)
++    return false;
++
++  item = items.Get(0);
++  return true;
++}
++
+ int CVideoDatabase::GetSeasonForEpisode(int idEpisode)
+ {
+   char column[5];
+--- a/xbmc/video/VideoDatabase.h
++++ b/xbmc/video/VideoDatabase.h
+@@ -24,6 +24,7 @@
+ #include "Bookmark.h"
+ #include "utils/SortUtils.h"
+ #include "video/VideoDbUrl.h"
++#include "xbmc/FileItem.h"
+ 
+ #include <memory>
+ #include <set>
+@@ -662,6 +663,8 @@ public:
+   void GetEpisodesByPlot(const std::string& strSearch, CFileItemList& items);
+   void GetMoviesByPlot(const std::string& strSearch, CFileItemList& items);
+ 
++  bool GetNextEpisodeFromTvShow(const int idTvShow, CFileItemPtr& item);
++
+   bool LinkMovieToTvshow(int idMovie, int idShow, bool bRemove);
+   bool IsLinkedToTvshow(int idMovie);
+   bool GetLinksToTvShow(int idMovie, std::vector<int>& ids);
+--- a/xbmc/windows/GUIWindowHome.cpp
++++ b/xbmc/windows/GUIWindowHome.cpp
+@@ -26,6 +26,7 @@
+ #include "interfaces/AnnouncementManager.h"
+ #include "utils/log.h"
+ #include "settings/AdvancedSettings.h"
++#include "settings/Settings.h"
+ #include "utils/Variant.h"
+ #include "guilib/GUIWindowManager.h"
+ #include "Application.h"
+@@ -104,6 +105,14 @@ void CGUIWindowHome::Announce(AnnouncementFlag flag, const char *sender, const c
+       ra_flag |= Audio;
+   }
+ 
++  // OnUpdate from VideoLibrary and with home filter active, we have to update the video list
++  if (onUpdate && (flag & VideoLibrary) && (
++      !CSettings::Get().GetBool("videolibrary.showseeninhome") ||
++      CSettings::Get().GetInt("videolibrary.tvshowsinhome") != SETTINGS_VIDEODB_TVSHOW_HOME_EPISODES) )
++  {
++    ra_flag |= Video;
++  }
++
+   CGUIMessage reload(GUI_MSG_NOTIFY_ALL, GetID(), 0, GUI_MSG_REFRESH_THUMBS, ra_flag);
+   g_windowManager.SendThreadMessage(reload, GetID());
+ }

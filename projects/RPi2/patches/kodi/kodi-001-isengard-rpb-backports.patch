@@ -17,7 +17,7 @@ index 318ecec..59698f6 100644
      {
        dialog->Show();
 +#ifdef TARGET_RASPBERRY_PI
-+      while(!event.WaitMSec(40))
++      while(!event.WaitMSec(35))
 +#else
        while(!event.WaitMSec(1))
 +#endif

@@ -9,6 +9,18 @@ else
   DISTRO="$DISTRO"
 fi
 
+# determines EDITION_NAME, if not forced by user
+# default is community or official
+if [ -z "$EDITION_NAME" ]; then
+  if [ "$OFFICIAL" = "yes" ]; then
+     EDITION_NAME="official"
+  else
+     EDITION_NAME="community"
+  fi
+else
+  EDITION_NAME="$EDITION_NAME"
+fi
+
 # determines PROJECT, if not forced by user
 # default is Generic
 if [ -z "$PROJECT" ]; then

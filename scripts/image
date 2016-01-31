@@ -95,18 +95,14 @@ fi
   echo -e "VERSION=\"$OPENELEC_VERSION\"" >> $INSTALL/etc/os-release
   echo -e "ID=\"openelec\"" >> $INSTALL/etc/os-release
   echo -e "VERSION_ID=\"$OS_VERSION\"" >> $INSTALL/etc/os-release
-  echo -e "PRETTY_NAME=\"$DISTRONAME ($([ "$OFFICIAL" = "yes" ] && echo "official" ||  echo "community")) - Version: $OPENELEC_VERSION\"" >> $INSTALL/etc/os-release
+  echo -e "PRETTY_NAME=\"$DISTRONAME ($EDITION_NAME) - Version: $OPENELEC_VERSION\"" >> $INSTALL/etc/os-release
   echo -e "HOME_URL=\"http://www.openelec.tv\"" >> $INSTALL/etc/os-release
   echo -e "BUG_REPORT_URL=\"https://github.com/OpenELEC/OpenELEC.tv\"" >> $INSTALL/etc/os-release
   if [ -n "$GIT_HASH" ]; then
 	echo -e "BUILD_ID=\"$GIT_HASH\"" >> $INSTALL/etc/os-release
   fi
   echo -e "OPENELEC_ARCH=\"$PROJECT.$TARGET_ARCH\"" >> $INSTALL/etc/os-release
-  if [ "$OFFICIAL" = "yes" ]; then
-    echo -e "OPENELEC_BUILD=\"official\"" >> $INSTALL/etc/os-release
-  else
-    echo -e "OPENELEC_BUILD=\"community\"" >> $INSTALL/etc/os-release
-  fi
+  echo -e "OPENELEC_BUILD=\"$EDITION_NAME\"" >> $INSTALL/etc/os-release
 
 # create /etc/issue
   echo "$GREETING0" >  $INSTALL/etc/issue
@@ -114,7 +110,7 @@ fi
   echo "$GREETING2" >> $INSTALL/etc/issue
   echo "$GREETING3" >> $INSTALL/etc/issue
   echo "$GREETING4" >> $INSTALL/etc/issue
-  echo "$DISTRONAME ($([ "$OFFICIAL" = "yes" ] && echo "official" ||  echo "community")) Version: $OPENELEC_VERSION" >> $INSTALL/etc/issue
+  echo "$DISTRONAME ($EDITION_NAME) Version: $OPENELEC_VERSION" >> $INSTALL/etc/issue
   if [ -n "$GIT_HASH" ]; then
     echo "$DISTRONAME git: $GIT_HASH" >> $INSTALL/etc/issue
   fi

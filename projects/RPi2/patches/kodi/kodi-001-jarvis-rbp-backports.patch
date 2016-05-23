@@ -2010,7 +2010,7 @@ index 6816b45..6cc5a8f 100644
        dialog->Open();
  
 +#ifdef TARGET_RASPBERRY_PI
-+      while(!event.WaitMSec(100))
++      while(!event.WaitMSec(35))
 +#else
        while(!event.WaitMSec(1))
 +#endif

@@ -1,0 +1,611 @@
+From 43a60bf8069d73c3057884107999ec77bc011b55 Mon Sep 17 00:00:00 2001
+From: "Sascha Kuehndel (InuSasha)" <dev@inusasha.de>
+Date: Mon, 20 Jun 2016 17:56:24 +0200
+Subject: [PATCH] own recentlyadded lists
+
+---
+ .../resource.language.en_gb/resources/strings.po   | 11 ++-
+ .../playlists/recent_unwatched_tvshows.xsp         | 13 +++
+ addons/skin.estuary/xml/Home.xml                   | 21 +++--
+ xbmc/filesystem/VideoDatabaseDirectory.cpp         |  6 ++
+ .../VideoDatabaseDirectory/CMakeLists.txt          |  4 +
+ .../VideoDatabaseDirectory/DirectoryNode.cpp       |  6 ++
+ .../VideoDatabaseDirectory/DirectoryNode.h         |  4 +-
+ .../DirectoryNodeGrouped.cpp                       |  2 +
+ .../DirectoryNodeHomeMovies.cpp                    | 57 +++++++++++++
+ .../DirectoryNodeHomeMovies.h                      | 36 ++++++++
+ .../DirectoryNodeHomeTvShows.cpp                   | 99 ++++++++++++++++++++++
+ .../DirectoryNodeHomeTvShows.h                     | 36 ++++++++
+ .../DirectoryNodeOverview.cpp                      |  4 +
+ xbmc/filesystem/VideoDatabaseDirectory/Makefile    |  2 +
+ .../VideoDatabaseDirectory/QueryParams.cpp         |  2 +
+ xbmc/video/GUIViewStateVideo.cpp                   |  2 +
+ xbmc/video/VideoDbUrl.cpp                          |  4 +
+ xbmc/video/windows/GUIWindowVideoNav.cpp           | 10 ++-
+ 18 files changed, 306 insertions(+), 13 deletions(-)
+ create mode 100644 addons/skin.estuary/playlists/recent_unwatched_tvshows.xsp
+ create mode 100644 xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.cpp
+ create mode 100644 xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.h
+ create mode 100644 xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.cpp
+ create mode 100644 xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.h
+
+diff --git a/addons/resource.language.en_gb/resources/strings.po b/addons/resource.language.en_gb/resources/strings.po
+index abfc92b..89364fd 100644
+--- a/addons/resource.language.en_gb/resources/strings.po
++++ b/addons/resource.language.en_gb/resources/strings.po
+@@ -126,7 +126,16 @@ msgctxt "#17"
+ msgid "Sunday"
+ msgstr ""
+ 
+-#empty strings from id 18 to 20
++#. Home PlayLists
++msgctxt "#18"
++msgid "Home Movie Liste"
++msgstr ""
++
++msgctxt "#19"
++msgid "Home Serien Liste"
++msgstr ""
++
++#empty strings id 20
+ 
+ msgctxt "#21"
+ msgid "January"
+diff --git a/addons/skin.estuary/playlists/recent_unwatched_tvshows.xsp b/addons/skin.estuary/playlists/recent_unwatched_tvshows.xsp
+new file mode 100644
+index 0000000..57aa687
+--- /dev/null
++++ b/addons/skin.estuary/playlists/recent_unwatched_tvshows.xsp
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
++<smartplaylist type="tvshows">
++    <name>Unwatched TV shows</name>
++    <match>all</match>
++    <rule field="numwatched" operator="is">
++        <value>0</value>
++    </rule>
++    <rule field="numepisodes" operator="greaterthan">
++        <value>0</value>
++    </rule>
++    <limit>15</limit>
++    <order direction="descending">dateadded</order>
++</smartplaylist>
+diff --git a/addons/skin.estuary/xml/Home.xml b/addons/skin.estuary/xml/Home.xml
+index 16187cc..58cfccf 100644
+--- a/addons/skin.estuary/xml/Home.xml
++++ b/addons/skin.estuary/xml/Home.xml
+@@ -63,9 +63,11 @@
+ 							<param name="list_id" value="5100"/>
+ 						</include>
+ 						<include content="WidgetListPoster" condition="Library.HasContent(movies)">
+-							<param name="content_path" value="special://skin/playlists/recent_unwatched_movies.xsp"/>
+-							<param name="widget_header" value="$LOCALIZE[20386]"/>
++							<param name="content_path" value="videodb://homemovies/"/>
++							<param name="widget_header" value="$LOCALIZE[20386]/$LOCALIZE[20434]"/>
+ 							<param name="widget_target" value="videos"/>
++							<param name="sortby" value="dateadded"/>
++							<param name="sortorder" value="descending"/>
+ 							<param name="list_id" value="5200"/>
+ 						</include>
+ 						<include content="WidgetListPoster" condition="Library.HasContent(movies)">
+@@ -117,17 +119,18 @@
+ 							<param name="widget_target" value="videos"/>
+ 							<param name="list_id" value="6900"/>
+ 						</include>
+-						<include content="WidgetListPoster" condition="Library.HasContent(tvshows)">
+-							<param name="content_path" value="videodb://inprogresstvshows"/>
+-							<param name="sortby" value="lastplayed"/>
+-							<param name="sortorder" value="descending"/>
++						<include content="WidgetListEpisodes" condition="Library.HasContent(tvshows)">
++							<param name="content_path" value="videodb://hometvshows"/>
++							<param name="sortby" value="name"/>
+ 							<param name="widget_header" value="$LOCALIZE[626]"/>
+ 							<param name="widget_target" value="videos"/>
+ 							<param name="list_id" value="6100"/>
+ 						</include>
+-						<include content="WidgetListEpisodes" condition="Library.HasContent(tvshows)">
+-							<param name="content_path" value="special://skin/playlists/recent_unwatched_episodes.xsp"/>
+-							<param name="widget_header" value="$LOCALIZE[20387]"/>
++						<include content="WidgetListPoster" condition="Library.HasContent(tvshows)">
++							<param name="content_path" value="special://skin/playlists/recent_unwatched_tvshows.xsp"/>
++							<param name="sortby" value="dateadded"/>
++							<param name="sortorder" value="descending"/>
++							<param name="widget_header" value="$LOCALIZE[20387]/$LOCALIZE[20343]"/>
+ 							<param name="widget_target" value="videos"/>
+ 							<param name="list_id" value="6200"/>
+ 						</include>
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory.cpp b/xbmc/filesystem/VideoDatabaseDirectory.cpp
+index 4ff3543..a267a58 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory.cpp
++++ b/xbmc/filesystem/VideoDatabaseDirectory.cpp
+@@ -220,6 +220,10 @@ bool CVideoDatabaseDirectory::GetLabel(const std::string& strDirectory, std::str
+       strLabel = g_localizeStrings.Get(20360); break;
+     case NODE_TYPE_INPROGRESS_TVSHOWS: // InProgress TvShows
+       strLabel = g_localizeStrings.Get(626); break;
++    case NODE_TYPE_HOME_MOVIES:
++      strLabel = g_localizeStrings.Get(18); break;
++    case NODE_TYPE_HOME_TVSHOWS:
++      strLabel = g_localizeStrings.Get(19); break;
+     default:
+       return false;
+     }
+@@ -271,8 +275,10 @@ std::string CVideoDatabaseDirectory::GetIcon(const std::string &strDirectory)
+     return "DefaultYear.png";
+   case NODE_TYPE_DIRECTOR: // Director
+     return "DefaultDirector.png";
++  case NODE_TYPE_HOME_MOVIES:
+   case NODE_TYPE_MOVIES_OVERVIEW: // Movies
+     return "DefaultMovies.png";
++  case NODE_TYPE_HOME_TVSHOWS:
+   case NODE_TYPE_TVSHOWS_OVERVIEW: // TV Shows
+     return "DefaultTVShows.png";
+   case NODE_TYPE_RECENTLY_ADDED_MOVIES: // Recently Added Movies
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/CMakeLists.txt b/xbmc/filesystem/VideoDatabaseDirectory/CMakeLists.txt
+index 149fa5c..c90a562 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/CMakeLists.txt
++++ b/xbmc/filesystem/VideoDatabaseDirectory/CMakeLists.txt
+@@ -1,6 +1,8 @@
+ set(SOURCES DirectoryNode.cpp
+             DirectoryNodeEpisodes.cpp
+             DirectoryNodeGrouped.cpp
++            DirectoryNodeHomeMovies.cpp
++            DirectoryNodeHomeTvShows.cpp
+             DirectoryNodeInProgressTvShows.cpp
+             DirectoryNodeMoviesOverview.cpp
+             DirectoryNodeMusicVideosOverview.cpp
+@@ -19,6 +21,8 @@ set(SOURCES DirectoryNode.cpp
+ set(HEADERS DirectoryNode.h
+             DirectoryNodeEpisodes.h
+             DirectoryNodeGrouped.h
++            DirectoryNodeHomeMovies.h
++            DirectoryNodeHomeTvShows.h
+             DirectoryNodeInProgressTvShows.h
+             DirectoryNodeMoviesOverview.h
+             DirectoryNodeMusicVideosOverview.h
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.cpp b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.cpp
+index 0c588d5..572005f 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.cpp
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.cpp
+@@ -36,6 +36,8 @@
+ #include "DirectoryNodeMusicVideosOverview.h"
+ #include "DirectoryNodeRecentlyAddedMusicVideos.h"
+ #include "DirectoryNodeTitleMusicVideos.h"
++#include "DirectoryNodeHomeMovies.h"
++#include "DirectoryNodeHomeTvShows.h"
+ #include "URL.h"
+ #include "FileItem.h"
+ #include "utils/StringUtils.h"
+@@ -140,6 +142,10 @@ CDirectoryNode* CDirectoryNode::CreateNode(NODE_TYPE Type, const std::string& st
+     return new CDirectoryNodeInProgressTvShows(strName,pParent);
+   case NODE_TYPE_TITLE_MUSICVIDEOS:
+     return new CDirectoryNodeTitleMusicVideos(strName,pParent);
++  case NODE_TYPE_HOME_MOVIES:
++    return new CDirectoryNodeHomeMovies(strName,pParent);
++  case NODE_TYPE_HOME_TVSHOWS:
++    return new CDirectoryNodeHomeTvShows(strName,pParent);
+   default:
+     break;
+   }
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.h b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.h
+index 3601824..bb08afb 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.h
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNode.h
+@@ -55,7 +55,9 @@ namespace XFILE
+       NODE_TYPE_SETS,
+       NODE_TYPE_COUNTRY,
+       NODE_TYPE_TAGS,
+-      NODE_TYPE_INPROGRESS_TVSHOWS
++      NODE_TYPE_INPROGRESS_TVSHOWS,
++      NODE_TYPE_HOME_MOVIES,
++      NODE_TYPE_HOME_TVSHOWS
+     } NODE_TYPE;
+ 
+     typedef struct {
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeGrouped.cpp b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeGrouped.cpp
+index b19e5a0..92926cb 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeGrouped.cpp
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeGrouped.cpp
+@@ -126,6 +126,8 @@ std::string CDirectoryNodeGrouped::GetContentType(const CQueryParams &params) co
+     case NODE_TYPE_TITLE_MUSICVIDEOS:
+     case NODE_TYPE_TITLE_TVSHOWS:
+     case NODE_TYPE_TVSHOWS_OVERVIEW:
++    case NODE_TYPE_HOME_MOVIES:
++    case NODE_TYPE_HOME_TVSHOWS:
+     default:
+       break;
+   }
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.cpp b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.cpp
+new file mode 100644
+index 0000000..fbd50c1
+--- /dev/null
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.cpp
+@@ -0,0 +1,57 @@
++/*
++ *      Copyright (C) 2005-2013 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "DirectoryNodeHomeMovies.h"
++#include "QueryParams.h"
++#include "video/VideoDatabase.h"
++
++using namespace XFILE::VIDEODATABASEDIRECTORY;
++
++CDirectoryNodeHomeMovies::CDirectoryNodeHomeMovies(const std::string& strName, CDirectoryNode* pParent)
++  : CDirectoryNode(NODE_TYPE_HOME_MOVIES, strName, pParent)
++{
++
++}
++
++bool CDirectoryNodeHomeMovies::GetContent(CFileItemList& items) const
++{
++  CVideoDatabase videodatabase;
++  if (!videodatabase.Open())
++    return false;
++
++  CQueryParams params;
++  CollectQueryParams(params);
++
++  CDatabase::Filter filter;
++  filter.fields  = "m.*";
++  filter.join    = "m left join (select idSet, min(premiered) as premiered from movie_view where playCount is NULL and idSet is not null group by idSet) p on (m.idSet = p.idSet)";
++  filter.where   = "m.playCount IS NULL AND (m.idSet is NULL or m.premiered = p.premiered)";
++  filter.group   = "coalesce(m.idSet,CONCAT('a',m.idMovie))";
++
++  SortDescription sort;
++  sort.sortBy    = SortByDateAdded;
++  sort.sortOrder = SortOrderDescending;
++
++  bool bSuccess=videodatabase.GetMoviesByWhere("videodb://movies/", filter, items, sort);
++
++  videodatabase.Close();
++
++  return bSuccess;
++}
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.h b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.h
+new file mode 100644
+index 0000000..15024d6
+--- /dev/null
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeMovies.h
+@@ -0,0 +1,36 @@
++#pragma once
++/*
++ *      Copyright (C) 2005-2013 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "DirectoryNode.h"
++
++namespace XFILE
++{
++  namespace VIDEODATABASEDIRECTORY
++  {
++    class CDirectoryNodeHomeMovies : public CDirectoryNode
++    {
++    public:
++      CDirectoryNodeHomeMovies(const std::string& strEntryName, CDirectoryNode* pParent);
++    protected:
++      virtual bool GetContent(CFileItemList& items) const;
++    };
++  }
++}
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.cpp b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.cpp
+new file mode 100644
+index 0000000..a70f05c
+--- /dev/null
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.cpp
+@@ -0,0 +1,99 @@
++/*
++ *      Copyright (C) 2005-2013 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "DirectoryNodeHomeTvShows.h"
++#include "FileItem.h"
++#include "QueryParams.h"
++#include "video/VideoDatabase.h"
++
++using namespace XFILE::VIDEODATABASEDIRECTORY;
++
++CDirectoryNodeHomeTvShows::CDirectoryNodeHomeTvShows(const std::string& strName, CDirectoryNode* pParent)
++  : CDirectoryNode(NODE_TYPE_HOME_TVSHOWS, strName, pParent)
++{
++
++}
++
++bool CDirectoryNodeHomeTvShows::GetContent(CFileItemList& items) const
++{
++  CVideoDatabase videodatabase;
++  if (!videodatabase.Open())
++    return false;
++
++  CQueryParams params;
++  CollectQueryParams(params);
++
++  // select watching tvshows
++  CDatabase::Filter filter;
++  filter.fields  = "e.*";
++  filter.join    = videodatabase.PrepareSQL(
++    "e "
++    "right join tvshow_view t on (e.idShow = t.idShow) "
++    "right join ("
++      "SELECT idShow, MIN(IF(c%02d = -1, c%02d, c%02d) * 4096 + IF(c%02d = -1, c%02d, c%02d-1+c%02d/10000)) AS sort "
++      "FROM episode_view "
++      "WHERE playCount is NULL "
++      "GROUP BY idShow"
++    ") s on (e.idShow = s.idShow)",
++    VIDEODB_ID_EPISODE_SORTSEASON,  VIDEODB_ID_EPISODE_SEASON,  VIDEODB_ID_EPISODE_SORTSEASON,
++    VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE, VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE
++  );
++  filter.where   = videodatabase.PrepareSQL(
++    "t.watchedCount != 0 "
++    "AND s.sort = IF(e.c%02d = -1, e.c%02d, e.c%02d) * 4096 + IF(e.c%02d = -1, e.c%02d, e.c%02d-1+e.c%02d/10000)",
++    VIDEODB_ID_EPISODE_SORTSEASON,  VIDEODB_ID_EPISODE_SEASON,  VIDEODB_ID_EPISODE_SORTSEASON,
++    VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE, VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE
++  );
++
++  SortDescription sort;
++  sort.sortBy    = SortByTvShowTitle;
++  sort.sortOrder = SortOrderAscending;
++
++  bool bSuccess=videodatabase.GetEpisodesByWhere("videodb://tvshows/titles/", filter, items, true, sort);
++  if ( ! bSuccess )
++  {
++    videodatabase.Close();
++    return false;
++  }
++
++  // select recentlyadded tvshows
++  filter.where   = videodatabase.PrepareSQL(
++      "t.watchedCount = 0 "
++      "AND s.sort = IF(e.c%02d = -1, e.c%02d, e.c%02d) * 4096 + IF(e.c%02d = -1, e.c%02d, e.c%02d-1+e.c%02d/10000)",
++      VIDEODB_ID_EPISODE_SORTSEASON,  VIDEODB_ID_EPISODE_SEASON,  VIDEODB_ID_EPISODE_SORTSEASON,
++      VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE, VIDEODB_ID_EPISODE_SORTEPISODE, VIDEODB_ID_EPISODE_EPISODE
++  );
++  filter.order   = videodatabase.PrepareSQL( "t.dateAdded desc");
++  sort.sortBy    = SortByNone;
++
++  CFileItemList recentlyadded;
++  bSuccess=videodatabase.GetEpisodesByWhere("videodb://tvshows/titles/", filter, recentlyadded, true, sort);
++  if ( ! bSuccess )
++  {
++    videodatabase.Close();
++    return false;
++  }
++
++  items.Append( recentlyadded);
++
++  videodatabase.Close();
++
++  return true;
++}
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.h b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.h
+new file mode 100644
+index 0000000..0b757fe
+--- /dev/null
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeHomeTvShows.h
+@@ -0,0 +1,36 @@
++#pragma once
++/*
++ *      Copyright (C) 2005-2013 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "DirectoryNode.h"
++
++namespace XFILE
++{
++  namespace VIDEODATABASEDIRECTORY
++  {
++    class CDirectoryNodeHomeTvShows : public CDirectoryNode
++    {
++    public:
++      CDirectoryNodeHomeTvShows(const std::string& strEntryName, CDirectoryNode* pParent);
++    protected:
++      virtual bool GetContent(CFileItemList& items) const;
++    };
++  }
++}
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeOverview.cpp b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeOverview.cpp
+index bb139e8..f00c54d 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeOverview.cpp
++++ b/xbmc/filesystem/VideoDatabaseDirectory/DirectoryNodeOverview.cpp
+@@ -37,6 +37,8 @@ Node OverviewChildren[] = {
+                             { NODE_TYPE_RECENTLY_ADDED_EPISODES,    "recentlyaddedepisodes",    20387 },
+                             { NODE_TYPE_RECENTLY_ADDED_MUSICVIDEOS, "recentlyaddedmusicvideos", 20390 },
+                             { NODE_TYPE_INPROGRESS_TVSHOWS,         "inprogresstvshows",        626 },
++                            { NODE_TYPE_HOME_MOVIES,                "homemovies",               18 },
++                            { NODE_TYPE_HOME_TVSHOWS,               "hometvshows",              19 },
+                           };
+ 
+ CDirectoryNodeOverview::CDirectoryNodeOverview(const std::string& strName, CDirectoryNode* pParent)
+@@ -94,10 +96,12 @@ bool CDirectoryNodeOverview::GetContent(CFileItemList& items) const
+   {
+     if (hasMovies)
+       vec.push_back(std::make_pair("recentlyaddedmovies", 20386));  // Recently Added Movies
++      vec.push_back(std::make_pair("homemovies", 18));
+     if (hasTvShows)
+     {
+       vec.push_back(std::make_pair("recentlyaddedepisodes", 20387)); // Recently Added Episodes
+       vec.push_back(std::make_pair("inprogresstvshows", 626)); // InProgress TvShows
++      vec.push_back(std::make_pair("hometvshows", 19));
+     }
+     if (hasMusicVideos)
+       vec.push_back(std::make_pair("recentlyaddedmusicvideos", 20390)); // Recently Added Music Videos
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/Makefile b/xbmc/filesystem/VideoDatabaseDirectory/Makefile
+index fc2f803..1fe1b38 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/Makefile
++++ b/xbmc/filesystem/VideoDatabaseDirectory/Makefile
+@@ -14,6 +14,8 @@ SRCS=DirectoryNode.cpp \
+      DirectoryNodeTitleMusicVideos.cpp \
+      DirectoryNodeTitleTvShows.cpp \
+      DirectoryNodeTvShowsOverview.cpp \
++     DirectoryNodeHomeMovies.cpp \
++     DirectoryNodeHomeTvShows.cpp \
+      QueryParams.cpp \
+ 
+ LIB=videodatabasedirectory.a
+diff --git a/xbmc/filesystem/VideoDatabaseDirectory/QueryParams.cpp b/xbmc/filesystem/VideoDatabaseDirectory/QueryParams.cpp
+index cee0e91..e2026442 100644
+--- a/xbmc/filesystem/VideoDatabaseDirectory/QueryParams.cpp
++++ b/xbmc/filesystem/VideoDatabaseDirectory/QueryParams.cpp
+@@ -71,6 +71,7 @@ void CQueryParams::SetQueryParam(NODE_TYPE NodeType, const std::string& strNodeN
+   case NODE_TYPE_DIRECTOR:
+     m_idDirector = idDb;
+     break;
++  case NODE_TYPE_HOME_MOVIES:
+   case NODE_TYPE_TITLE_MOVIES:
+   case NODE_TYPE_RECENTLY_ADDED_MOVIES:
+     m_idMovie = idDb;
+@@ -82,6 +83,7 @@ void CQueryParams::SetQueryParam(NODE_TYPE NodeType, const std::string& strNodeN
+   case NODE_TYPE_SEASONS:
+     m_idSeason = idDb;
+     break;
++  case NODE_TYPE_HOME_TVSHOWS:
+   case NODE_TYPE_EPISODES:
+   case NODE_TYPE_RECENTLY_ADDED_EPISODES:
+     m_idEpisode = idDb;
+diff --git a/xbmc/video/GUIViewStateVideo.cpp b/xbmc/video/GUIViewStateVideo.cpp
+index 85e8e14..87952e2 100644
+--- a/xbmc/video/GUIViewStateVideo.cpp
++++ b/xbmc/video/GUIViewStateVideo.cpp
+@@ -142,6 +142,8 @@ CGUIViewStateWindowVideoNav::CGUIViewStateWindowVideoNav(const CFileItemList& it
+         SetSortOrder(viewState->m_sortDescription.sortOrder);
+       }
+       break;
++    case NODE_TYPE_HOME_MOVIES:
++    case NODE_TYPE_HOME_TVSHOWS:
+     case NODE_TYPE_MUSICVIDEOS_ALBUM:
+     case NODE_TYPE_GENRE:
+     case NODE_TYPE_COUNTRY:
+diff --git a/xbmc/video/VideoDbUrl.cpp b/xbmc/video/VideoDbUrl.cpp
+index 0ae0456..de9d242 100644
+--- a/xbmc/video/VideoDbUrl.cpp
++++ b/xbmc/video/VideoDbUrl.cpp
+@@ -45,6 +45,7 @@ bool CVideoDbUrl::parse()
+ 
+   switch (dirType)
+   {
++    case VIDEODATABASEDIRECTORY::NODE_TYPE_HOME_MOVIES:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_MOVIES_OVERVIEW:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_RECENTLY_ADDED_MOVIES:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_TITLE_MOVIES:
+@@ -52,6 +53,7 @@ bool CVideoDbUrl::parse()
+       m_type = "movies";
+       break;
+ 
++    case VIDEODATABASEDIRECTORY::NODE_TYPE_HOME_TVSHOWS:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_TVSHOWS_OVERVIEW:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_TITLE_TVSHOWS:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_SEASONS:
+@@ -74,6 +76,7 @@ bool CVideoDbUrl::parse()
+ 
+   switch (childType)
+   {
++    case VIDEODATABASEDIRECTORY::NODE_TYPE_HOME_MOVIES:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_MOVIES_OVERVIEW:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_TITLE_MOVIES:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_RECENTLY_ADDED_MOVIES:
+@@ -93,6 +96,7 @@ bool CVideoDbUrl::parse()
+       m_itemType = "seasons";
+       break;
+ 
++    case VIDEODATABASEDIRECTORY::NODE_TYPE_HOME_TVSHOWS:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_EPISODES:
+     case VIDEODATABASEDIRECTORY::NODE_TYPE_RECENTLY_ADDED_EPISODES:
+       m_type = "tvshows";
+diff --git a/xbmc/video/windows/GUIWindowVideoNav.cpp b/xbmc/video/windows/GUIWindowVideoNav.cpp
+index 850c1b5..1077815 100644
+--- a/xbmc/video/windows/GUIWindowVideoNav.cpp
++++ b/xbmc/video/windows/GUIWindowVideoNav.cpp
+@@ -374,7 +374,8 @@ bool CGUIWindowVideoNav::GetDirectory(const std::string &strDirectory, CFileItem
+ 
+       if (node == VIDEODATABASEDIRECTORY::NODE_TYPE_EPISODES ||
+           node == NODE_TYPE_SEASONS                          ||
+-          node == NODE_TYPE_RECENTLY_ADDED_EPISODES)
++          node == NODE_TYPE_RECENTLY_ADDED_EPISODES          ||
++          node == NODE_TYPE_HOME_TVSHOWS)
+       {
+         CLog::Log(LOGDEBUG, "WindowVideoNav::GetDirectory");
+         // grab the show thumb
+@@ -435,7 +436,8 @@ bool CGUIWindowVideoNav::GetDirectory(const std::string &strDirectory, CFileItem
+           items.SetContent("seasons");
+       }
+       else if (node == NODE_TYPE_TITLE_MOVIES ||
+-               node == NODE_TYPE_RECENTLY_ADDED_MOVIES)
++               node == NODE_TYPE_RECENTLY_ADDED_MOVIES ||
++               node == NODE_TYPE_HOME_MOVIES)
+       {
+         if (params.GetSetId() > 0)
+         {
+@@ -1208,6 +1210,10 @@ std::string CGUIWindowVideoNav::GetStartFolder(const std::string &dir)
+     return "videodb://inprogresstvshows/";
+   else if (lower == "files")
+     return "sources://video/";
++  else if (lower == "homemovies")
++    return "videodb://homemovies/";
++  else if (lower == "hometvshows")
++    return "videodb://hometvshows/";
+   return CGUIWindowVideoBase::GetStartFolder(dir);
+ }
+ 

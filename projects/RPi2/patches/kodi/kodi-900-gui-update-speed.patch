@@ -1,0 +1,21 @@
+From: Sascha 'InuSasha' Kuehndel <dev@inusasha.de>
+Date: Mon, 7 Apr 2014 18:19:32 +0100
+Subject: [rbp/omxplayer] When opening a stream update gui spedd
+
+---
+ xbmc/dialogs/GUIDialogBusy.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/xbmc/dialogs/GUIDialogBusy.cpp b/xbmc/dialogs/GUIDialogBusy.cpp
+index c8fe0706d128b3c67a4000894129ae0fa08bb223..8a5916299575661743131b921a27a76f0bb88409 100644
+--- a/xbmc/dialogs/GUIDialogBusy.cpp
++++ b/xbmc/dialogs/GUIDialogBusy.cpp
+@@ -70,7 +70,7 @@ bool CGUIDialogBusy::WaitOnEvent(CEvent &event, unsigned int displaytime /* = 10
+       dialog->Open();
+ 
+ #ifdef TARGET_RASPBERRY_PI
+-      while(!event.WaitMSec(100))
++      while(!event.WaitMSec(35))
+ #else
+       while(!event.WaitMSec(1))
+ #endif

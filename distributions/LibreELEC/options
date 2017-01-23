@@ -29,10 +29,10 @@
 # Skins to install (Estuary)
 # Space separated list is supported,
 # e.g. SKINS="Estuary"
-  SKINS="Estuary"
+  SKINS="ConfluenceInuSasha Estuary"
 
 # Default Skin (Estuary)
-  SKIN_DEFAULT="Estuary"
+  SKIN_DEFAULT="ConfluenceInuSasha"
 
 # install extra subtitle Fonts for KODI (yes / no)
   KODI_EXTRA_FONTS="yes"

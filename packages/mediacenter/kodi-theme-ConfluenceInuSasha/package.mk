@@ -14,7 +14,7 @@
 ################################################################################
 
 PKG_NAME="kodi-theme-ConfluenceInuSasha"
-PKG_VERSION="3c44096c151066d1c4d9436f0b58fd51cf916238"
+PKG_VERSION="4.0.0.i1"
 PKG_SITE="https://github.com/InuSasha/skin.confluence"
 PKG_URL="$PKG_SITE/archive/$PKG_VERSION.tar.gz"
 PKG_SOURCE_DIR="skin.confluence-$PKG_VERSION"

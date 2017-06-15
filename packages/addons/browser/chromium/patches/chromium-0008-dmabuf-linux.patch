@@ -1,0 +1,11 @@
+--- chromium-59.0.3071.86/ui/gfx/linux/client_native_pixmap_dmabuf.cc.org	2017-06-16 21:05:06.587556360 +0200
++++ chromium-59.0.3071.86/ui/gfx/linux/client_native_pixmap_dmabuf.cc	2017-06-16 21:05:41.055722143 +0200
+@@ -17,7 +17,7 @@
+ #include "base/strings/stringprintf.h"
+ #include "base/trace_event/trace_event.h"
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
++#if 1
+ #include <linux/types.h>
+ 
+ struct local_dma_buf_sync {

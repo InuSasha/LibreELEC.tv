@@ -1,0 +1,13 @@
+[Unit]
+Description=Create kernel modules tree from overlays
+DefaultDependencies=no
+After=var.mount systemd-tmpfiles-setup-dev.service
+Before=systemd-modules-load.service systemd-udevd.service systemd-udev-trigger.service sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/module-overlays-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

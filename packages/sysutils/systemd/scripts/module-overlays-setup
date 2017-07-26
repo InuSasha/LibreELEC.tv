@@ -1,0 +1,60 @@
+#!/bin/sh
+
+SYSTEM_OVERLAYS_DIR=/usr/lib/module-overlays
+OVERLAY_CONFIG_DIR=/storage/.cache/module-overlays
+KVER=$(uname -r)
+MODULES_DIR="/var/lib/modules/${KVER}"
+
+mkdir -p "${MODULES_DIR}"
+mkdir -p "${OVERLAY_CONFIG_DIR}"
+
+log() {
+  echo "module-overlays-setup: $@" > /dev/kmsg
+}
+
+apply_overlay() {
+ case "$1" in
+    /*)
+      overlay_dir="${1}/lib/modules/${KVER}"
+      ;;
+    *)
+      overlay_dir="${SYSTEM_OVERLAYS_DIR}/${1}/lib/modules/${KVER}"
+      ;;
+  esac
+
+  if [ ! -d "${overlay_dir}" ] ; then
+    return 1
+  fi
+
+  cp -rfs "${overlay_dir}"/* "${MODULES_DIR}"
+}
+
+# setup system base modules
+
+log "setup base modules"
+apply_overlay base
+
+# apply user-configured module overlays
+
+if [ -d "${OVERLAY_CONFIG_DIR}" ] ; then
+  log "adding overlays from ${OVERLAY_CONFIG_DIR}"
+  got_overlays="no"
+  for conf in "${OVERLAY_CONFIG_DIR}/"*.conf ; do
+    log "processing conf $conf"
+    overlay=$(cat "$conf")
+    if [ -n "$overlay" ] ; then
+      apply_overlay "$overlay"
+      if [ $? -eq 0 ] ; then
+        log "added overlay $overlay"
+        got_overlays="yes"
+      else
+        log "failed to add overlay $overlay"
+      fi
+    fi
+  done
+
+  if [ "yes" = "$got_overlays" ] ; then
+    log "running depmod"
+    /usr/sbin/depmod -a
+  fi
+fi

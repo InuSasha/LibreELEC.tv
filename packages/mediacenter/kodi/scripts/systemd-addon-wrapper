@@ -33,3 +33,17 @@ if [ -f "/storage/.kodi/addons/$1/system.d/$1.service" ] ; then
     systemctl start "$1.service"
   fi
 fi
+
+if [ ! -d /storage/.cache/module-overlays ] ; then
+  mkdir -p /storage/.cache/module-overlays
+fi
+
+if [ -d "/storage/.kodi/addons/$1/module-overlays" ] ; then
+  CONF_FILE="/storage/.cache/module-overlays/50-$1.conf"
+
+  if [ "_$2" = "_1" ] ; then
+    rm -f "$CONF_FILE"
+  else
+    echo "/storage/.kodi/addons/$1/module-overlays" > "$CONF_FILE"
+  fi
+fi

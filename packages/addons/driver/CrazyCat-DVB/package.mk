@@ -70,7 +70,7 @@ makeinstall_target() {
 }
 
 addon() {
-  MODULE_DIR="$ADDON_BUILD/$PKG_ADDON_ID/module-overlays/lib/modules/$(get_module_dir)/updates/$PKG_NAME"
+  MODULE_DIR="$ADDON_BUILD/$PKG_ADDON_ID/module-overlay/lib/modules/$(get_module_dir)/updates/$PKG_NAME"
 
   mkdir -p $MODULE_DIR
   find $PKG_BUILD/v4l/ -name \*.ko -exec cp {} $MODULE_DIR \;

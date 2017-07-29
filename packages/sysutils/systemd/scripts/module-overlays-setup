@@ -1,7 +1,7 @@
 #!/bin/sh
 ################################################################################
-#      This file is part of LibreELEC - http://www.libreelec.tv
-#      Copyright (C) 2017 Team LibreELEC
+#      This file is part of LibreELEC - https://www.libreelec.tv
+#      Copyright (C) 2017-present Team LibreELEC
 #
 #  LibreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ log() {
 }
 
 apply_overlay() {
- case "$1" in
+  case "$1" in
     /*)
       overlay_dir="${1}/lib/modules/${KVER}"
       ;;
@@ -57,15 +57,16 @@ if [ -d "${OVERLAY_CONFIG_DIR}" ] ; then
   log "adding overlays from ${OVERLAY_CONFIG_DIR}"
   got_overlays="no"
   for conf in "${OVERLAY_CONFIG_DIR}/"*.conf ; do
-    log "processing conf $conf"
-    overlay=$(cat "$conf")
-    if [ -n "$overlay" ] ; then
-      apply_overlay "$overlay"
-      if [ $? -eq 0 ] ; then
-        log "added overlay $overlay"
-        got_overlays="yes"
-      else
-        log "failed to add overlay $overlay"
+    if [ -e "$conf" ] ; then
+      log "processing conf $conf"
+      overlay=$(cat "$conf")
+      if [ -n "$overlay" ] ; then
+        if apply_overlay "$overlay" ; then
+          log "added overlay $overlay"
+          got_overlays="yes"
+        else
+          log "failed to add overlay $overlay"
+        fi
       fi
     fi
   done

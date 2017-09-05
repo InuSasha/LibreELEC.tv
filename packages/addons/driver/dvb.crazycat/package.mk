@@ -16,21 +16,30 @@
 #  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="media_build"
+PKG_NAME="dvb.crazycat"
 PKG_VERSION="2017-06-20-rpi"
 PKG_SHA256="ff30bf1ee9fe342649ad80c9072ab4d37238d05680da850828f6d6c1d6b2e6d4"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/crazycat69/linux_media"
-PKG_URL="$DISTRO_SRC/$PKG_NAME-$PKG_VERSION.tar.xz"
+PKG_URL="$DISTRO_SRC/media_build-$PKG_VERSION.tar.xz"
+PKG_SOURCE_DIR="media_build-$PKG_VERSION"
+
+# add dvb.crazycat.previous dependency to pull in kernel modules
+# from previous release version.
+#PKG_DEPENDS_TARGET="toolchain linux dvb.crazycat.previous"
 PKG_DEPENDS_TARGET="toolchain linux"
+
 PKG_BUILD_DEPENDS_TARGET="toolchain linux"
 PKG_NEED_UNPACK="$LINUX_DEPENDS"
 PKG_SECTION="driver"
-PKG_SHORTDESC="DVB drivers that replace the version shipped with the kernel"
-PKG_LONGDESC="DVB drivers that replace the version shipped with the kernel"
-PKG_IS_ADDON="no"
+PKG_SHORTDESC="CrazyCats DVB driver for TBS cards and other experimental drivers."
+PKG_LONGDESC="CrazyCats DVB driver for TBS cards and other experimental drivers."
 PKG_AUTORECONF="no"
+PKG_IS_ADDON="yes"
+PKG_ADDON_NAME="DVB drivers for TBS (CrazyCat)"
+PKG_ADDON_TYPE="xbmc.service"
+PKG_ADDON_VERSION="${ADDON_VERSION}.${PKG_REV}"
 
 pre_make_target() {
   export KERNEL_VER=$(get_module_dir)
@@ -55,7 +64,26 @@ make_target() {
   make VER=$KERNEL_VER SRCDIR=$(kernel_path)
 }
 
+pre_makeinstall_target() {
+  # copy in modules from previous version
+  OLD_DIR="$(get_build_dir dvb.crazycat.previous)"
+
+  if [ -d "$OLD_DIR/kernel-overlay/lib" ] ; then
+    mkdir -p "$INSTALL/$(get_kernel_overlay_dir $PKG_ADDON_ID)/"
+    cp -Pr "$OLD_DIR/kernel-overlay/lib" "$INSTALL/$(get_kernel_overlay_dir $PKG_ADDON_ID)/"
+  fi
+}
+
 makeinstall_target() {
-  mkdir -p $INSTALL/$(get_full_module_dir)/updates
-  find $PKG_BUILD/v4l/ -name \*.ko -exec cp {} $INSTALL/$(get_full_module_dir)/updates \;
+  MODULE_DIR="$INSTALL/$(get_full_module_dir $PKG_ADDON_ID)/updates/$PKG_ADDON_ID"
+  ADDON_DIR="$INSTALL/usr/share/$MEDIACENTER/addons/$PKG_ADDON_ID"
+
+  mkdir -p $MODULE_DIR
+  find $PKG_BUILD/v4l/ -name \*.ko -exec cp {} $MODULE_DIR \;
+
+  find $MODULE_DIR -name \*.ko -exec $STRIP --strip-debug {} \;
+
+  mkdir -p $ADDON_DIR
+  cp $PKG_DIR/changelog.txt $ADDON_DIR
+  install_addon_files "$ADDON_DIR"
 }

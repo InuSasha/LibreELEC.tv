@@ -14,7 +14,7 @@
 ################################################################################
 
 PKG_NAME="kodi-theme-ConfluenceInuSasha"
-PKG_VERSION="3.1.0.i1"
+PKG_VERSION="3.1.43.i1"
 PKG_SITE="https://github.com/InuSasha/skin.confluence"
 PKG_URL="$PKG_SITE/archive/$PKG_VERSION.tar.gz"
 PKG_SOURCE_DIR="skin.confluence-$PKG_VERSION"
@@ -26,7 +26,7 @@ make_target() {
 makeinstall_target() {
   SKINDIR="$INSTALL/usr/share/kodi/addons/skin.ConfluenceInuSasha"
   mkdir -p $SKINDIR
-  cp -PR $ROOT/$PKG_BUILD/* $SKINDIR
+  cp -PR $PKG_BUILD/* $SKINDIR
 
   sed -e "s|skin.confluence|skin.ConfluenceInuSasha|g" \
       -e "s|name=\"Confluence\"|name=\"ConfluenceInuSasha\"|g" \

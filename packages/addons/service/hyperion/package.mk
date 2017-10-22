@@ -19,7 +19,7 @@
 
 PKG_NAME="hyperion"
 PKG_VERSION="1c21232"
-PKG_REV="106"
+PKG_REV="106.003"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/hyperion-project/hyperion"
 PKG_URL="https://github.com/hyperion-project/hyperion/archive/$PKG_VERSION.tar.gz"

@@ -1,0 +1,13 @@
+# Kodi Media Center language file
+# Addon Name: hyperion
+# Addon id: service.hyperion
+msgid ""
+msgstr ""
+
+msgctxt "#30000"
+msgid "Test Video"
+msgstr "Test-Video"
+
+msgctxt "#30001"
+msgid "play Test Video"
+msgstr "Test-Video abspielen"

@@ -15,23 +15,11 @@ Subject: [PATCH] sql-client: add support for mariadb-client mariadb is a
  7 files changed, 97 insertions(+), 6 deletions(-)
  create mode 100644 cmake/modules/FindMariaDBClient.cmake
 
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2effae81bca2..47c2575b0451 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -148,6 +148,7 @@ set(optional_deps Alsa
-                   CCache
-                   DBus
-                   LCMS2
-+                  MariaDBClient
-                   MDNS
-                   MicroHttpd
-                   MySqlClient
-diff --git a/cmake/modules/FindMariaDBClient.cmake b/cmake/modules/FindMariaDBClient.cmake
+diff --git a/project/cmake/modules/FindMariaDBClient.cmake b/project/cmake/modules/FindMariaDBClient.cmake
 new file mode 100644
 index 000000000000..168e603ff5b4
 --- /dev/null
-+++ b/cmake/modules/FindMariaDBClient.cmake
++++ b/project/cmake/modules/FindMariaDBClient.cmake
 @@ -0,0 +1,74 @@
 +#.rst:
 +# FindMariaDBClient
@@ -107,10 +95,10 @@ index 000000000000..168e603ff5b4
 +endif()
 +
 +mark_as_advanced(MARIADBCLIENT_INCLUDE_DIR MARIADBCLIENT_LIBRARY)
-diff --git a/cmake/modules/FindMySqlClient.cmake b/cmake/modules/FindMySqlClient.cmake
+diff --git a/project/cmake/modules/FindMySqlClient.cmake b/project/cmake/modules/FindMySqlClient.cmake
 index 50db58237bba..98a271da62fd 100644
---- a/cmake/modules/FindMySqlClient.cmake
-+++ b/cmake/modules/FindMySqlClient.cmake
+--- a/project/cmake/modules/FindMySqlClient.cmake
++++ b/project/cmake/modules/FindMySqlClient.cmake
 @@ -14,6 +14,11 @@
  #
  #   MySqlClient::MySqlClient   - The MySqlClient library
@@ -212,3 +200,14 @@ index c3072acb1f8a..82c46d567dd1 100644
  
  namespace dbiplus {
  /***************** Class MysqlDatabase definition ******************
+--- kodi-a9a7a20/project/cmake/CMakeLists.txt.org	2018-01-05 18:52:34.388091467 +0100
++++ kodi-a9a7a20/project/cmake/CMakeLists.txt	2018-01-05 18:52:50.544181263 +0100
+@@ -115,7 +115,7 @@
+ endif()
+ 
+ # Optional dependencies
+-set(optional_deps LCMS2 MicroHttpd MySqlClient SSH XSLT
++set(optional_deps LCMS2 MariaDBClient MicroHttpd MySqlClient SSH XSLT
+                   Alsa UDEV DBus Avahi SmbClient CCache
+                   PulseAudio VDPAU VAAPI Bluetooth CAP)
+ 

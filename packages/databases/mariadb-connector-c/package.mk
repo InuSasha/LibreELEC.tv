@@ -27,6 +27,7 @@ PKG_DEPENDS_TARGET="toolchain zlib openssl"
 PKG_SECTION="database"
 PKG_SHORTDESC="mariadb-connector: library to conntect to mariadb/mysql database server"
 PKG_LONGDESC="mariadb-connector: library to conntect to mariadb/mysql database server"
+PKG_BUILD_FLAGS="-gold"
 
 PKG_CMAKE_OPTS_TARGET="-DWITH_EXTERNAL_ZLIB=ON
                        -DAUTH_CLEARTEXT=STATIC

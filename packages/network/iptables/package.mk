@@ -11,6 +11,7 @@ PKG_URL="http://www.netfilter.org/projects/iptables/files/$PKG_NAME-$PKG_VERSION
 PKG_DEPENDS_TARGET="toolchain linux:host libmnl libnftnl"
 PKG_LONGDESC="IP packet filter administration."
 PKG_TOOLCHAIN="autotools"
+PKG_BUILD_FLAGS="-hardening"
 
 post_makeinstall_target() {
   mkdir -p $INSTALL/usr/config/iptables/

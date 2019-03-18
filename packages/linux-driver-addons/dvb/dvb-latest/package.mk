@@ -10,6 +10,7 @@ PKG_URL="https://github.com/LibreELEC/media_build/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_UNPACK="media_tree"
 PKG_SECTION="driver.dvb"
 PKG_LONGDESC="DVB drivers from the latest kernel (media_build)"
+PKG_BUILD_FLAGS="-hardening"
 
 PKG_IS_ADDON="embedded"
 PKG_IS_KERNEL_PKG="yes"

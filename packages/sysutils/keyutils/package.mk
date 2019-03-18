@@ -10,7 +10,7 @@ PKG_SITE="http://people.redhat.com/~dhowells/keyutils/"
 PKG_URL="http://people.redhat.com/~dhowells/keyutils/$PKG_NAME-$PKG_VERSION.tar.bz2"
 PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="Keyutils is a set of utilities for managing the key retention facility in the kernel."
-PKG_BUILD_FLAGS="+pic"
+PKG_BUILD_FLAGS="+pic -hardening"
 
 PKG_MAKE_OPTS_TARGET="NO_ARLIB=0 NO_SOLIB=1 BINDIR=/usr/bin SBINDIR=/usr/sbin LIBDIR=/usr/lib USRLIBDIR=/usr/lib"
 PKG_MAKEINSTALL_OPTS_TARGET="$PKG_MAKE_OPTS_TARGET"

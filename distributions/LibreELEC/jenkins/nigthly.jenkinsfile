@@ -4,6 +4,10 @@ pipeline {
         BRANCH='master'
         ALPHA='false'
         ALPHA_VERSION='1'
+        
+        CCACHE_DISABLE='1'
+        CONCURRENCY_MAKE_LEVEL="${BUILD_CAUSE == 'SCMTRIGGER' ? '4' : '' }"
+        PERIODIC="${BUILD_CAUSE == 'SCMTRIGGER' ? 'nightly' : '' }"
     }
 
     stages {
@@ -99,20 +103,11 @@ no)
     ;;
 esac
 
-case "${BUILD_CAUSE}" in
-SCMTRIGGER)
-	CONCURRENCY_MAKE_LEVEL=4
-    PERIODIC=nightly
-    ;;
-esac
-
-
 DOW=`date +%w`
 WEEK=`date +%U`
 WEEKLY=`date +"%Y"`
 PRIORWEEK=`date +"%Y" -d "last sunday"`
 export WEEKLY=`echo ${LE_VER}-weekly-${WEEKLY}${WEEK}`; echo "WEEKLY = ${WEEKLY}" >> env.properties
-export CCACHE_DISABLE=1
 # Determine how the image will be built for sources and target and on which jenkins system
 echo "Determine which build server we are on to define SOURCES and TARGET"
 case "`echo ${NODE_NAME}`" in

@@ -1,0 +1,11 @@
+pipeline {
+    agent { label 'le-build' }
+    
+    stages {
+        stage('Test') {
+            steps {
+                echo 'Test'
+            }
+        }
+    }
+}

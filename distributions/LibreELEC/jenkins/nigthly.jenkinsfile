@@ -109,115 +109,56 @@ export LE_VER=`cat distributions/LibreELEC/version | grep OS_VERSION | awk -F"\"
         stage('Build') {
             steps {
                 sh """#!/bin/bash -ex
-                    DOW=`date +%w`
-                    WEEK=`date +%U`
-                    WEEKLY=`date +"%Y"`
-                    PRIORWEEK=`date +"%Y" -d "last sunday"`
-                    export WEEKLY=`echo ${LE_VER}-weekly-${WEEKLY}${WEEK}`; echo "WEEKLY = ${WEEKLY}" >> env.properties
+                    export WEEKLY="${LE_VER}-weekly-$(date +'%Y%U')"
+                    echo "WEEKLY = ${WEEKLY}" >> env.properties
 
                     # Determine how the image will be built for sources and target and on which jenkins system
                     echo "Determine which build server we are on to define SOURCES and TARGET"
                     
                     SOURCES_DIR="sources"
                     case "${NODE_NAME}" in
-                        build1) SOURCES_DIR="${BUILD1_SOURCES_DIR}";;
+                        build1)                      SOURCES_DIR="${BUILD1_SOURCES_DIR}";;
                         build2|build3|build4|build5) SOURCES_DIR="${BUILD2_SOURCES_DIR}";;
                     esac
                     
                     TARGET_DIR="target"
                     case "${ALPHA}-${NODE_NAME}" in
-                        true-build1) TARGET_DIR="${BUILD1_TARGET_DIR}/upload";;
+                        true-build1)  TARGET_DIR="${BUILD1_TARGET_DIR}/upload";;
                         false-build1) TARGET_DIR="${BUILD1_TARGET_DIR}"
-                        true-build*) TARGET_DIR="${BUILD2_TARGET_DIR}/upload";;
+                        true-build*)  TARGET_DIR="${BUILD2_TARGET_DIR}/upload";;
                         false-build*) TARGET_DIR="${BUILD2_TARGET_DIR}"
-                    esac                    
-                        
-case "`echo ${NODE_NAME}`" in
-    build1)
-            case "${DEVICE}" in
-            EMPTY)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
-                    ;;
-                esac
-                ;;
-            *)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
-                    ;;
-                esac
-                ;;
-             esac
-        ;;
-    build2|build3|build4|build5)
-            case "${DEVICE}" in
-            EMPTY)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
+                    esac
+                    
+                    case "${NODE_NAME}" in
+                        build*) echo '';;
+                        *)      echo "Unable to determine build server, SOURCES and TARGET will use defaults."
+                    esac
+               
+                    if [ "${ALPHA}" == "true" ]; then
+                        echo 'OFFICIAL="yes"' >> distributions/LibreELEC/version
+                        sed -e 's|LIBREELEC_VERSION="devel"|LIBREELEC_VERSION="${ALPHA_VERSION}"|' -i distributions/LibreELEC/version
+                        VER=`cat distributions/LibreELEC/version`
+                        echo "${VER}"
+                        BUILD_PERIODIC="${PERIODIC}"
+                    fi
+                    
+                    export PROJECT="${PROJECT}"
+                    export DEVICE="${DEVICE}"
+                    export ARCH="${ARCH}"
+                    export SOURCES_DIR="${SOURCES_DIR}"
+                    export TARGET_DIR="${TARGET_DIR}"
+                    export CONCURRENCY_MAKE_LEVEL="${CONCURRENCY_MAKE_LEVEL}"
+                    export UBOOT_SYSTEM="${UBOOT}"
+                    export BUILD_PERIODIC="${PERIODIC}"
+                    make image
+                    PASS=`echo "$?"`
+                """
+            }
+        }
 
-                    ;;
-                esac
-                ;;
-            *)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} SOURCES_DIR=${SOURCES_DIR} TARGET_DIR=${TARGET_DIR} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
-
-                    ;;
-                esac
-                ;;
-            esac
-        ;;
-    *)
-        echo "Unable to determine build server, SOURCES and TARGET will use defaults."
-            case "${DEVICE}" in
-            EMPTY)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} ARCH=${ARCH} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} ARCH=${ARCH} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
-
-                    ;;
-                esac
-                ;;
-            *)
-                case "${ALPHA}" in
-                true)
-                    echo "OFFICIAL=\"yes\"" >> distributions/LibreELEC/version
-                    sed -i -e s#LIBREELEC_VERSION=\"devel\"#LIBREELEC_VERSION=\"${ALPHA_VERSION}\"# distributions/LibreELEC/version; VER=`cat distributions/LibreELEC/version`; echo ${VER}; PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" make image; PASS=`echo "$?"`
-                    ;;
-                *)
-                    PROJECT=${PROJECT} DEVICE=${DEVICE} ARCH=${ARCH} CONCURRENCY_MAKE_LEVEL=${CONCURRENCY_MAKE_LEVEL} UBOOT_SYSTEM="${UBOOT}" BUILD_PERIODIC=${PERIODIC} make image; PASS=`echo "$?"`
-                    ;;
-                esac
-                ;;
-            esac
-        ;;
-esac
-
-
+        stage('Post Build') {
+            steps {
+                sh """#!/bin/bash -ex
 # Let's figure out what the URL will look like on web03 and save the remaining values to the java properties file
 echo ${NODE_NAME}
 

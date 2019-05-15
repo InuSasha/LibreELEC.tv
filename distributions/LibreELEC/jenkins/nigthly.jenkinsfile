@@ -323,28 +323,29 @@ case "${DEF}" in
     esac
     ;;
 esac
+"""
 
-
-
-# Cleanup the workspace
-
-case "${Clean}" in
-make_distclean)
-    sleep 15
-	rm -R packages/*
-    make distclean
-    ;;
-make_clean)
-    make clean
-    ;;
-no)
-    echo "Not cleaning build"
-    ;;
-esac
-
-printenv
-                """
+        stage('Cleanup - Post') {
+            steps {
+                sh """#!/bin/bash -ex
+                    case "${Clean}" in
+                        make_distclean) sleep 15
+	                                rm -R packages/*
+                                        make distclean
+                                        ;;
+                        make_clean)     make clean ;;
+                        no)             echo "Not cleaning build";;
+                    esac
+		"""
             }
         }
+
+        stage('Show Env') {
+            steps {
+                sh """#!/bin/bash -ex
+		    printenv
+		"""
+            }
+	}
     }
 }
